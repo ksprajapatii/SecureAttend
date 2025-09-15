@@ -1,0 +1,292 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Attendance Records{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Attendance Records</h2>
+    <div class="btn-group">
+        <button class="btn btn-success" onclick="exportAttendance('csv')">
+            <i class="fas fa-file-csv me-2"></i>Export CSV
+        </button>
+        <button class="btn btn-primary" onclick="exportAttendance('pdf')">
+            <i class="fas fa-file-pdf me-2"></i>Export PDF
+        </button>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="user" class="form-label">User</label>
+                <select class="form-select" id="user" name="user">
+                    <option value="">All Users</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}" {% if filters.user_id == user.id|stringformat:"s" %}selected{% endif %}>
+                        {{ user.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="date_from" class="form-label">From Date</label>
+                <input type="date" class="form-control" id="date_from" name="date_from" value="{{ filters.date_from }}">
+            </div>
+            <div class="col-md-3">
+                <label for="date_to" class="form-label">To Date</label>
+                <input type="date" class="form-control" id="date_to" name="date_to" value="{{ filters.date_to }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-2"></i>Filter
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Attendance Records Table -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                        <th>Mask Status</th>
+                        <th>Liveness</th>
+                        <th>Confidence</th>
+                        <th>Anomaly</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if record.user.photo %}
+                                <img src="{{ record.user.photo.url }}" class="rounded-circle me-2" width="32" height="32" alt="User Photo">
+                                {% else %}
+                                <div class="bg-secondary rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                    <i class="fas fa-user text-white"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <div class="fw-bold">{{ record.user.name }}</div>
+                                    <small class="text-muted">{{ record.user.email }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ record.date }}</td>
+                        <td>{{ record.time }}</td>
+                        <td>
+                            {% if record.status == 'Present' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check me-1"></i>{{ record.status }}
+                                </span>
+                            {% elif record.status == 'Absent' %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-times me-1"></i>{{ record.status }}
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-question me-1"></i>{{ record.status }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if record.mask_status == 'With Mask' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-mask me-1"></i>With Mask
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-mask me-1"></i>Without Mask
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if record.liveness_status == 'Live' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-heartbeat me-1"></i>Live
+                                </span>
+                            {% else %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-skull me-1"></i>Spoof
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="progress" style="width: 60px; height: 20px;">
+                                <div class="progress-bar {% if record.confidence_score > 0.7 %}bg-success{% elif record.confidence_score > 0.5 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                     style="width: {{ record.confidence_score|floatformat:0 }}%">
+                                    {{ record.confidence_score|floatformat:1 }}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if record.anomaly_flag %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>Yes
+                                </span>
+                            {% else %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check me-1"></i>No
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-outline-primary" onclick="viewRecord('{{ record.id }}')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                {% if record.captured_image %}
+                                <button class="btn btn-sm btn-outline-info" onclick="viewImage('{{ record.captured_image.url }}')">
+                                    <i class="fas fa-image"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted">No attendance records found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if records.has_other_pages %}
+        <nav aria-label="Attendance pagination">
+            <ul class="pagination justify-content-center">
+                {% if records.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ records.previous_page_number }}{% if filters.user_id %}&user={{ filters.user_id }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}">Previous</a>
+                </li>
+                {% endif %}
+                
+                {% for num in records.paginator.page_range %}
+                {% if records.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+                {% elif num > records.number|add:'-3' and num < records.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if filters.user_id %}&user={{ filters.user_id }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}">{{ num }}</a>
+                </li>
+                {% endif %}
+                {% endfor %}
+                
+                {% if records.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ records.next_page_number }}{% if filters.user_id %}&user={{ filters.user_id }}{% endif %}{% if filters.date_from %}&date_from={{ filters.date_from }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to }}{% endif %}">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Record Detail Modal -->
+<div class="modal fade" id="recordDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Attendance Record Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="recordDetailContent">
+                <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Image View Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Captured Image</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalImage" src="" class="img-fluid" alt="Captured Image">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function viewRecord(recordId) {
+    fetch(`/api/attendance/${recordId}/`)
+    .then(response => response.json())
+    .then(data => {
+        const content = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>User Information</h6>
+                    <p><strong>Name:</strong> ${data.user_name}</p>
+                    <p><strong>Email:</strong> ${data.user_email}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Attendance Details</h6>
+                    <p><strong>Date:</strong> ${data.date}</p>
+                    <p><strong>Time:</strong> ${data.time}</p>
+                    <p><strong>Status:</strong> ${data.status}</p>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <h6>Detection Results</h6>
+                    <p><strong>Mask Status:</strong> ${data.mask_status}</p>
+                    <p><strong>Liveness Status:</strong> ${data.liveness_status}</p>
+                    <p><strong>Confidence Score:</strong> ${data.confidence_score}</p>
+                    <p><strong>Liveness Score:</strong> ${data.liveness_score}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Additional Information</h6>
+                    <p><strong>Anomaly Flag:</strong> ${data.anomaly_flag ? 'Yes' : 'No'}</p>
+                    <p><strong>IP Address:</strong> ${data.ip_address || 'N/A'}</p>
+                    <p><strong>Created:</strong> ${new Date(data.created_at).toLocaleString()}</p>
+                </div>
+            </div>
+            ${data.notes ? `<div class="mt-3"><h6>Notes</h6><p>${data.notes}</p></div>` : ''}
+        `;
+        
+        document.getElementById('recordDetailContent').innerHTML = content;
+        new bootstrap.Modal(document.getElementById('recordDetailModal')).show();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error loading record details');
+    });
+}
+
+function viewImage(imageUrl) {
+    document.getElementById('modalImage').src = imageUrl;
+    new bootstrap.Modal(document.getElementById('imageModal')).show();
+}
+
+function exportAttendance(format) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('format', format);
+    
+    window.open(`/api/attendance/export/?${params.toString()}`, '_blank');
+}
+</script>
+{% endblock %}

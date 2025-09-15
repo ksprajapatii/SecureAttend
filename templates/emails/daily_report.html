@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Daily Attendance Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 0 0 8px 8px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+        }
+        .summary {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-shield-alt"></i> SecureAttend</h1>
+        <p>Daily Attendance Report - {{ date }}</p>
+    </div>
+    
+    <div class="content">
+        <h2>Daily Summary</h2>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_users }}</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ present_today }}</div>
+                <div class="stat-label">Present Today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ absent_today }}</div>
+                <div class="stat-label">Absent Today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ anomaly_alerts }}</div>
+                <div class="stat-label">Active Alerts</div>
+            </div>
+        </div>
+        
+        <div class="summary">
+            <h3>Compliance Metrics</h3>
+            <p><strong>Mask Compliance Rate:</strong> {{ mask_compliance|floatformat:1 }}%</p>
+            <p><strong>Liveness Success Rate:</strong> {{ liveness_success|floatformat:1 }}%</p>
+            
+            <h3>Attendance Rate</h3>
+            <p><strong>Overall Attendance:</strong> 
+                {% if total_users > 0 %}
+                    {{ present_today|floatformat:0 }}/{{ total_users }} 
+                    ({{ present_today|floatformat:0|div:total_users|mul:100|floatformat:1 }}%)
+                {% else %}
+                    0%
+                {% endif %}
+            </p>
+        </div>
+        
+        {% if anomaly_alerts > 0 %}
+        <div class="summary">
+            <h3>⚠️ Security Alerts</h3>
+            <p>There are {{ anomaly_alerts }} unresolved security alerts that require attention.</p>
+            <div style="text-align: center; margin: 15px 0;">
+                <a href="http://localhost:8000/alerts/" style="background: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+                    Review Alerts
+                </a>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <a href="http://localhost:8000/" style="background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+                View Full Dashboard
+            </a>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated daily report from SecureAttend Face Recognition System.</p>
+        <p>Generated on {{ date }} at {{ "now"|date:"H:i" }}</p>
+    </div>
+</body>
+</html>

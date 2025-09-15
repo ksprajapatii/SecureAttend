@@ -1,0 +1,333 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Anomaly Alerts{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Anomaly Alerts</h2>
+    <div class="btn-group">
+        <button class="btn btn-success" onclick="markAllResolved()">
+            <i class="fas fa-check-double me-2"></i>Mark All Resolved
+        </button>
+        <button class="btn btn-primary" onclick="refreshAlerts()">
+            <i class="fas fa-sync me-2"></i>Refresh
+        </button>
+    </div>
+</div>
+
+<!-- Alert Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-danger">{{ alerts|length }}</h5>
+                <p class="card-text">Total Alerts</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-warning">
+                    {% for alert in alerts %}
+                        {% if not alert.is_resolved %}{{ forloop.counter0|add:1 }}{% endif %}
+                    {% endfor %}
+                </h5>
+                <p class="card-text">Unresolved</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-success">
+                    {% for alert in alerts %}
+                        {% if alert.is_resolved %}{{ forloop.counter0|add:1 }}{% endif %}
+                    {% endfor %}
+                </h5>
+                <p class="card-text">Resolved</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-info">
+                    {% for alert in alerts %}
+                        {% if alert.severity == 'critical' %}{{ forloop.counter0|add:1 }}{% endif %}
+                    {% endfor %}
+                </h5>
+                <p class="card-text">Critical</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alerts Table -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Severity</th>
+                        <th>User</th>
+                        <th>Message</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Resolved</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alert in alerts %}
+                    <tr class="{% if not alert.is_resolved %}table-warning{% endif %}">
+                        <td>
+                            <span class="badge bg-secondary">{{ alert.get_alert_type_display }}</span>
+                        </td>
+                        <td>
+                            {% if alert.severity == 'critical' %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>Critical
+                                </span>
+                            {% elif alert.severity == 'high' %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-exclamation-circle me-1"></i>High
+                                </span>
+                            {% elif alert.severity == 'medium' %}
+                                <span class="badge bg-info">
+                                    <i class="fas fa-info-circle me-1"></i>Medium
+                                </span>
+                            {% else %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle me-1"></i>Low
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if alert.user %}
+                            <div class="d-flex align-items-center">
+                                {% if alert.user.photo %}
+                                <img src="{{ alert.user.photo.url }}" class="rounded-circle me-2" width="24" height="24" alt="User Photo">
+                                {% else %}
+                                <div class="bg-secondary rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
+                                    <i class="fas fa-user text-white" style="font-size: 10px;"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <div class="fw-bold">{{ alert.user.name }}</div>
+                                    <small class="text-muted">{{ alert.user.email }}</small>
+                                </div>
+                            </div>
+                            {% else %}
+                            <span class="text-muted">Unknown User</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="text-truncate" style="max-width: 200px;" title="{{ alert.message }}">
+                                {{ alert.message }}
+                            </div>
+                        </td>
+                        <td>
+                            {% if alert.is_resolved %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check me-1"></i>Resolved
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-clock me-1"></i>Pending
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div>
+                                <div>{{ alert.created_at|date:"M d, Y" }}</div>
+                                <small class="text-muted">{{ alert.created_at|time:"H:i" }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            {% if alert.is_resolved %}
+                                <div>
+                                    <div>{{ alert.resolved_at|date:"M d, Y" }}</div>
+                                    <small class="text-muted">{{ alert.resolved_at|time:"H:i" }}</small>
+                                </div>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-outline-primary" onclick="viewAlert('{{ alert.id }}')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                {% if not alert.is_resolved %}
+                                <button class="btn btn-sm btn-outline-success" onclick="resolveAlert('{{ alert.id }}')">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">No alerts found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Alert Detail Modal -->
+<div class="modal fade" id="alertDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Alert Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="alertDetailContent">
+                <!-- Content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="resolveAlertBtn" onclick="resolveAlertFromModal()">
+                    <i class="fas fa-check me-2"></i>Mark as Resolved
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentAlertId = null;
+
+function viewAlert(alertId) {
+    currentAlertId = alertId;
+    
+    fetch(`/api/alerts/${alertId}/`)
+    .then(response => response.json())
+    .then(data => {
+        const content = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Alert Information</h6>
+                    <p><strong>Type:</strong> ${data.alert_type}</p>
+                    <p><strong>Severity:</strong> ${data.severity}</p>
+                    <p><strong>Status:</strong> ${data.is_resolved ? 'Resolved' : 'Pending'}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Timing</h6>
+                    <p><strong>Created:</strong> ${new Date(data.created_at).toLocaleString()}</p>
+                    ${data.resolved_at ? `<p><strong>Resolved:</strong> ${new Date(data.resolved_at).toLocaleString()}</p>` : ''}
+                    ${data.resolved_by_name ? `<p><strong>Resolved by:</strong> ${data.resolved_by_name}</p>` : ''}
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <h6>Message</h6>
+                    <p>${data.message}</p>
+                </div>
+            </div>
+            ${data.details ? `
+            <div class="row mt-3">
+                <div class="col-12">
+                    <h6>Details</h6>
+                    <pre class="bg-light p-3 rounded">${JSON.stringify(data.details, null, 2)}</pre>
+                </div>
+            </div>
+            ` : ''}
+        `;
+        
+        document.getElementById('alertDetailContent').innerHTML = content;
+        
+        // Show/hide resolve button based on status
+        const resolveBtn = document.getElementById('resolveAlertBtn');
+        if (data.is_resolved) {
+            resolveBtn.style.display = 'none';
+        } else {
+            resolveBtn.style.display = 'inline-block';
+        }
+        
+        new bootstrap.Modal(document.getElementById('alertDetailModal')).show();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error loading alert details');
+    });
+}
+
+function resolveAlert(alertId) {
+    if (confirm('Mark this alert as resolved?')) {
+        fetch(`/api/alerts/${alertId}/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            body: JSON.stringify({
+                is_resolved: true
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.id) {
+                location.reload();
+            } else {
+                alert('Error resolving alert');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error resolving alert');
+        });
+    }
+}
+
+function resolveAlertFromModal() {
+    if (currentAlertId) {
+        resolveAlert(currentAlertId);
+        bootstrap.Modal.getInstance(document.getElementById('alertDetailModal')).hide();
+    }
+}
+
+function markAllResolved() {
+    if (confirm('Mark all unresolved alerts as resolved?')) {
+        // Get all unresolved alert IDs
+        const unresolvedAlerts = Array.from(document.querySelectorAll('tr.table-warning')).map(row => {
+            const resolveBtn = row.querySelector('button[onclick*="resolveAlert"]');
+            return resolveBtn ? resolveBtn.onclick.toString().match(/'([^']+)'/)[1] : null;
+        }).filter(id => id);
+        
+        // Resolve all alerts
+        Promise.all(unresolvedAlerts.map(alertId => 
+            fetch(`/api/alerts/${alertId}/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+                body: JSON.stringify({
+                    is_resolved: true
+                })
+            })
+        ))
+        .then(() => {
+            location.reload();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error resolving alerts');
+        });
+    }
+}
+
+function refreshAlerts() {
+    location.reload();
+}
+</script>
+{% endblock %}
