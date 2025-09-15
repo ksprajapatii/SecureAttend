@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # SecureAttend - Liveness-Enabled Face Recognition Attendance System
 
 A comprehensive, industry-ready face recognition attendance system built with Django, featuring liveness detection, mask detection, and real-time anomaly alerts.
@@ -424,3 +425,7 @@ For support and questions:
 ---
 
 **SecureAttend** - Secure, Reliable, and Intelligent Face Recognition Attendance System
+=======
+# SecureAttend
+This is face recognising system 
+>>>>>>> 6fa33ed7ace3867f46ff30c068121264e3395640
